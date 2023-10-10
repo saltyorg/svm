@@ -93,7 +93,7 @@ def proxy():
     # Step 2: Check GitHub response status
     if response.status_code == 304:  # Not Modified
         # Use cached data from Redis
-        logger.info(f"Using cached data for URL: {url_to_fetch}")
+        logger.info(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} Using cached data for URL: {url_to_fetch}")
         return jsonify(json.loads(cached_resp["data"]))
     elif response.status_code == 200:  # OK
         # Update cache and return data
