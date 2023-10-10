@@ -57,8 +57,6 @@ else:
     REDIS_HOST = os.environ['REDIS_HOST']
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 log_format = "%(levelname)s %(message)s"
 formatter = ColoredFormatter(log_format)
 
@@ -66,14 +64,16 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
 
-logger.addHandler(console_handler)
-
 # Modify log level names
 logging.addLevelName(logging.CRITICAL, "CRT")
 logging.addLevelName(logging.DEBUG, "DBG")
 logging.addLevelName(logging.ERROR, "ERR")
 logging.addLevelName(logging.INFO, "INF")
 logging.addLevelName(logging.WARNING, "WRN")
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(console_handler)
 
 app = Flask(__name__)
 current_token_idx = 0
