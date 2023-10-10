@@ -82,8 +82,8 @@ def proxy():
 
     log_msg = (
         f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} "
-        f"INF Request processed duration={response.elapsed.total_seconds():.6f}s "
-        f"ip={ip}"
+        f"Request processed duration={response.elapsed.total_seconds():.6f}s "
+        f"ip={ip} "
         f"method=GET size='{len(response.content) / 1024:.2f} KiB' "
         f"status={response.status_code} uri={url_to_fetch} "
         f"rate_limit_remaining={remaining}"
