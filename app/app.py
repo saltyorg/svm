@@ -32,7 +32,10 @@ else:
     API_USAGE_THRESHOLD = int(os.environ['API_USAGE_THRESHOLD'])
     REDIS_HOST = os.environ['REDIS_HOST']
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    format="%(levelname)s %(message)s")
+logging.addLevelName(logging.WARNING, "WARN")
+
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -105,14 +108,14 @@ def proxy():
     except requests.exceptions.RequestException as e:
         request_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        log_message = f"{request_time} WRN Invalid request ip={ip} error={str(e)} uri={request.full_path}"
+        log_message = f"{request_time} Invalid request ip={ip} error={str(e)} uri={request.full_path}"
         logger.warning(log_message)
         return jsonify(error="Invalid request", detail=str(e)), 400
 
     except ValueError as e:
         request_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        log_message = f"{request_time} WRN Invalid parameter ip={ip} error={str(e)} uri={request.full_path}"
+        log_message = f"{request_time} Invalid parameter ip={ip} error={str(e)} uri={request.full_path}"
         logger.warning(log_message)
         return jsonify(error="Invalid parameter", detail=str(e)), 400
 
