@@ -17,6 +17,30 @@ DEV_CONFIG = {
 
 is_development = os.environ.get('FLASK_ENV') == 'development'
 
+class LogColors:
+    DEBUG = '\033[92m'    # GREEN
+    INFO = '\033[94m'     # BLUE
+    WARNING = '\033[93m'  # YELLOW
+    ERROR = '\033[91m'    # RED
+    CRITICAL = '\033[91m' # RED
+    ENDCOLOR = '\033[0m'  # Reset to the default color
+
+class ColoredFormatter(logging.Formatter):
+    def format(self, record):
+        log_colors = {
+            'DBG': LogColors.DEBUG,
+            'INF': LogColors.INFO,
+            'WRN': LogColors.WARNING,
+            'ERR': LogColors.ERROR,
+            'CRT': LogColors.CRITICAL,
+        }
+        log_level_name = record.levelname
+        log_color = log_colors.get(log_level_name, LogColors.ENDCOLOR)
+
+        record.levelname = f"{log_color}{log_level_name}{LogColors.ENDCOLOR}"
+
+        return super(ColoredFormatter, self).format(record)
+
 # Set configurations
 if is_development:
     ACCESS_TOKENS = DEV_CONFIG['GITHUB_PATS'].split(',')
@@ -32,15 +56,24 @@ else:
     API_USAGE_THRESHOLD = int(os.environ['API_USAGE_THRESHOLD'])
     REDIS_HOST = os.environ['REDIS_HOST']
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(levelname)s %(message)s")
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+log_format = "%(levelname)s %(message)s"
+formatter = ColoredFormatter(log_format)
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
+
+# Modify log level names
 logging.addLevelName(logging.CRITICAL, "CRT")
 logging.addLevelName(logging.DEBUG, "DBG")
 logging.addLevelName(logging.ERROR, "ERR")
 logging.addLevelName(logging.INFO, "INF")
 logging.addLevelName(logging.WARNING, "WRN")
-
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 current_token_idx = 0
