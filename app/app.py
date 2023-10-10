@@ -64,43 +64,57 @@ def send_notification(title, message):
 def proxy():
     global current_token_idx
 
-    url_to_fetch = request.args.get('url')
-    cached_resp = get_from_cache(url_to_fetch)
+    try:
+        url_to_fetch = request.args.get('url')
+        if not url_to_fetch:
+            raise ValueError("url parameter is required")
 
-    token = ACCESS_TOKENS[current_token_idx]
-    current_token_idx = (current_token_idx + 1) % len(ACCESS_TOKENS)
+        cached_resp = get_from_cache(url_to_fetch)
 
-    headers = {'Authorization': f'token {token}'}
+        token = ACCESS_TOKENS[current_token_idx]
+        current_token_idx = (current_token_idx + 1) % len(ACCESS_TOKENS)
 
-    # Step 1: Send request to GitHub with ETag if available
-    if cached_resp and "etag" in cached_resp:
-        headers['If-None-Match'] = cached_resp["etag"]
+        headers = {'Authorization': f'token {token}'}
 
-    response = requests.get(url_to_fetch, headers=headers)
-    remaining = int(response.headers.get('X-RateLimit-Remaining', 0))
-    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if cached_resp and "etag" in cached_resp:
+            headers['If-None-Match'] = cached_resp["etag"]
 
-    log_msg = (
-        f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} "
-        f"Request processed duration={response.elapsed.total_seconds():.6f}s "
-        f"ip={ip} "
-        f"method=GET size='{len(response.content) / 1024:.2f} KiB' "
-        f"status={response.status_code} uri={url_to_fetch} "
-        f"rate_limit_remaining={remaining}"
-    )
-    logger.info(log_msg)
+        response = requests.get(url_to_fetch, headers=headers)
+        remaining = int(response.headers.get('X-RateLimit-Remaining', 0))
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
 
-    # Step 2: Check GitHub response status
-    if response.status_code == 304:  # Not Modified
-        # Use cached data from Redis
-        logger.info(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} Using cached data for URL: {url_to_fetch}")
-        return jsonify(json.loads(cached_resp["data"]))
-    elif response.status_code == 200:  # OK
-        # Update cache and return data
-        set_to_cache(url_to_fetch, response.json(), response.headers.get('ETag', ''))
-        return jsonify(response.json())
-    else:
-        return make_response(jsonify({'error': 'Upstream API error', 'message': response.text}), response.status_code)
+        log_msg = (
+            f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} "
+            f"Request processed duration={response.elapsed.total_seconds():.6f}s "
+            f"ip={ip} "
+            f"method=GET size='{len(response.content) / 1024:.2f} KiB' "
+            f"status={response.status_code} uri={url_to_fetch} "
+            f"rate_limit_remaining={remaining}"
+        )
+        logger.info(log_msg)
+
+        if response.status_code == 304:
+            logger.info(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} Using cached data for URL: {url_to_fetch}")
+            return jsonify(json.loads(cached_resp["data"]))
+        elif response.status_code == 200:
+            set_to_cache(url_to_fetch, response.json(), response.headers.get('ETag', ''))
+            return jsonify(response.json())
+        else:
+            return make_response(jsonify({'error': 'Upstream API error', 'message': response.text}), response.status_code)
+
+    except requests.exceptions.RequestException as e:
+        request_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        log_message = f"{request_time} WRN Invalid request ip={ip} error={str(e)} uri={request.full_path}"
+        logger.warning(log_message)
+        return jsonify(error="Invalid request", detail=str(e)), 400
+
+    except ValueError as e:
+        request_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        log_message = f"{request_time} WRN Invalid parameter ip={ip} error={str(e)} uri={request.full_path}"
+        logger.warning(log_message)
+        return jsonify(error="Invalid parameter", detail=str(e)), 400
 
 
 if __name__ == "__main__":
