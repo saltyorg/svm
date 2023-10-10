@@ -34,7 +34,11 @@ else:
 
 logging.basicConfig(level=logging.INFO,
                     format="%(levelname)s %(message)s")
-logging.addLevelName(logging.WARNING, "WARN")
+logging.addLevelName(logging.CRITICAL, "CRT")
+logging.addLevelName(logging.DEBUG, "DBG")
+logging.addLevelName(logging.ERROR, "ERR")
+logging.addLevelName(logging.INFO, "INF")
+logging.addLevelName(logging.WARNING, "WRN")
 
 logger = logging.getLogger(__name__)
 
