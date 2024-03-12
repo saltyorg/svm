@@ -157,5 +157,10 @@ def proxy():
         return jsonify(error="Invalid parameter", detail=str(e)), 400
 
 
+@app.route('/ping', methods=["GET"])
+def ping():
+    return jsonify({'status': 'ok', 'message': 'Service is up and running'})
+
+
 if __name__ == "__main__":
     app.run(port=5000)
