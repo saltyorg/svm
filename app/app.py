@@ -75,8 +75,10 @@ logger.setLevel(logging.INFO)
 
 logging.basicConfig(level=logging.INFO, handlers=[console_handler])
 LOGGING_CONFIG['formatters']['default']['()'] = 'app.app.ColoredFormatter'
+LOGGING_CONFIG['formatters']['default']['fmt'] = log_format
 LOGGING_CONFIG['formatters']['default']['datefmt'] = TIME_FORMAT
 LOGGING_CONFIG['formatters']['access']['()'] = 'app.app.ColoredFormatter'
+LOGGING_CONFIG['formatters']['access']['fmt'] = log_format
 LOGGING_CONFIG['formatters']['access']['datefmt'] = TIME_FORMAT
 
 app = Quart(__name__)
