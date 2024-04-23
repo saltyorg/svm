@@ -56,8 +56,10 @@ else:
     REDIS_HOST = os.environ['REDIS_HOST']
 
 # Setup logging
-log_format = "%(levelname)s %(message)s"
+log_format = "%(asctime)s - %(name)s (%(lineno)d) - %(levelname)s - %(message)s"
 formatter = ColoredFormatter(log_format)
+
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
