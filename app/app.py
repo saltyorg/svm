@@ -4,6 +4,7 @@ import httpx
 import redis.asyncio as redis
 import json
 from quart import Quart, request, jsonify
+from uvicorn.config import LOGGING_CONFIG
 
 # Development Configurations
 DEV_CONFIG = {
@@ -13,7 +14,7 @@ DEV_CONFIG = {
 }
 
 is_development = os.environ.get('QUART_ENV') == 'development'
-
+TIME_FORMAT = '%d/%m/%Y %H:%M:%S'
 
 class LogColors:
     DEBUG = '\033[92m'    # GREEN
@@ -56,7 +57,7 @@ else:
 
 # Setup logging
 log_format = "%(levelname)s %(asctime)s %(message)s"
-formatter = ColoredFormatter(log_format, datefmt='%d/%m/%Y %H:%M:%S')
+formatter = ColoredFormatter(log_format, datefmt=TIME_FORMAT)
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
@@ -73,6 +74,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 logging.basicConfig(level=logging.INFO, handlers=[console_handler])
+LOGGING_CONFIG['formatters']['default']['()'] = 'app.app.ColoredFormatter'
+LOGGING_CONFIG['formatters']['default']['datefmt'] = TIME_FORMAT
+LOGGING_CONFIG['formatters']['access']['()'] = 'app.app.ColoredFormatter'
+LOGGING_CONFIG['formatters']['access']['datefmt'] = TIME_FORMAT
 
 app = Quart(__name__)
 current_token_idx = 0
