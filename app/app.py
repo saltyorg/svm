@@ -64,7 +64,9 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
 
 logging.getLogger('quart.app').removeHandler(default_handler)
+logging.getLogger('quart.serving').removeHandler(default_handler)
 logging.getLogger('quart.app').addHandler(console_handler)
+logging.getLogger('quart.serving').addHandler(console_handler)
 
 # Modify log level names
 logging.addLevelName(logging.CRITICAL, "CRT")
