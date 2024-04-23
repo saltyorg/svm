@@ -4,7 +4,6 @@ import httpx
 import redis.asyncio as redis
 import json
 from quart import Quart, request, jsonify
-from uvicorn.config import LOGGING_CONFIG
 
 # Development Configurations
 DEV_CONFIG = {
