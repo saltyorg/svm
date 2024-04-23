@@ -4,7 +4,7 @@ import httpx
 import redis.asyncio as redis
 import json
 from quart import Quart, request, jsonify
-from datetime import datetime
+from quart.logging import default_handler
 
 # Development Configurations
 DEV_CONFIG = {
@@ -56,14 +56,13 @@ else:
     REDIS_HOST = os.environ['REDIS_HOST']
 
 # Setup logging
-log_format = "%(asctime)s - %(name)s (%(lineno)d) - %(levelname)s - %(message)s"
+log_format = "%(asctime)s %(levelname)s %(message)s"
 formatter = ColoredFormatter(log_format)
-
-logging.basicConfig(level=logging.INFO, format=log_format)
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
+default_handler.setFormatter(formatter)
 
 # Modify log level names
 logging.addLevelName(logging.CRITICAL, "CRT")
@@ -125,7 +124,6 @@ async def proxy():
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
 
         log_msg = (
-            f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} "
             f"Request processed duration={response.elapsed.total_seconds():.6f}s "
             f"ip={ip} "
             f"method=GET size='{len(response.content) / 1024:.2f} KiB' "
@@ -136,7 +134,7 @@ async def proxy():
 
         if response.status_code == 304:
             logger.info(
-                f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} Using cached data for URL: {url_to_fetch}")
+                f"Using cached data for URL: {url_to_fetch}")
             return jsonify(json.loads(cached_resp["data"]))
         elif response.status_code == 200:
             await set_to_cache(url_to_fetch, response.json(), response.headers.get('ETag', ''))
@@ -145,16 +143,14 @@ async def proxy():
             return jsonify({'error': 'Upstream API error', 'message': response.text}), response.status_code
 
     except httpx.RequestError as e:
-        request_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        log_message = f"{request_time} Invalid request ip={ip} error={str(e)} uri={request.full_path}"
+        log_message = f"Invalid request ip={ip} error={str(e)} uri={request.full_path}"
         logger.warning(log_message)
         return jsonify(error="Invalid request", detail=str(e)), 400
 
     except ValueError as e:
-        request_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        log_message = f"{request_time} Invalid parameter ip={ip} error={str(e)} uri={request.full_path}"
+        log_message = f"Invalid parameter ip={ip} error={str(e)} uri={request.full_path}"
         logger.warning(log_message)
         return jsonify(error="Invalid parameter", detail=str(e)), 400
 
