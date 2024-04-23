@@ -78,7 +78,7 @@ LOGGING_CONFIG['formatters']['default']['()'] = 'app.app.ColoredFormatter'
 LOGGING_CONFIG['formatters']['default']['fmt'] = log_format
 LOGGING_CONFIG['formatters']['default']['datefmt'] = TIME_FORMAT
 LOGGING_CONFIG['formatters']['access']['()'] = 'app.app.ColoredFormatter'
-LOGGING_CONFIG['formatters']['access']['fmt'] = log_format
+LOGGING_CONFIG['formatters']['access']['fmt'] = '%(levelname)s %(asctime)s %(client_addr)s - "%(request_line)s" %(status_code)s'
 LOGGING_CONFIG['formatters']['access']['datefmt'] = TIME_FORMAT
 
 app = Quart(__name__)
