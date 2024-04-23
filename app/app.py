@@ -16,6 +16,7 @@ DEV_CONFIG = {
 is_development = os.environ.get('QUART_ENV') == 'development'
 TIME_FORMAT = '%d/%m/%Y %H:%M:%S'
 
+
 class LogColors:
     DEBUG = '\033[92m'    # GREEN
     INFO = '\033[94m'     # BLUE
@@ -74,12 +75,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 logging.basicConfig(level=logging.INFO, handlers=[console_handler])
-LOGGING_CONFIG['formatters']['default']['()'] = 'app.app.ColoredFormatter'
-LOGGING_CONFIG['formatters']['default']['fmt'] = log_format
-LOGGING_CONFIG['formatters']['default']['datefmt'] = TIME_FORMAT
-LOGGING_CONFIG['formatters']['access']['()'] = 'app.app.ColoredFormatter'
-LOGGING_CONFIG['formatters']['access']['fmt'] = '%(levelname)s %(asctime)s %(client_addr)s - "%(request_line)s" %(status_code)s'
-LOGGING_CONFIG['formatters']['access']['datefmt'] = TIME_FORMAT
+
+logging.getLogger('uvicorn').handlers = [console_handler]
+logging.getLogger('uvicorn.access').handlers = [console_handler]
 
 app = Quart(__name__)
 current_token_idx = 0
