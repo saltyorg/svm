@@ -62,7 +62,9 @@ formatter = ColoredFormatter(log_format)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
-default_handler.setFormatter(formatter)
+
+logging.getLogger('quart.app').removeHandler(default_handler)
+logging.getLogger('quart.app').addHandler(console_handler)
 
 # Modify log level names
 logging.addLevelName(logging.CRITICAL, "CRT")
