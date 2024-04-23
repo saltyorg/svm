@@ -4,7 +4,6 @@ import httpx
 import redis.asyncio as redis
 import json
 from quart import Quart, request, jsonify
-from quart.logging import default_handler
 
 # Development Configurations
 DEV_CONFIG = {
@@ -57,7 +56,7 @@ else:
 
 # Setup logging
 log_format = "%(levelname)s %(asctime)s %(message)s"
-formatter = ColoredFormatter(log_format)
+formatter = ColoredFormatter(log_format, datefmt='%d/%m/%Y %H:%M:%S')
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
@@ -72,7 +71,8 @@ logging.addLevelName(logging.WARNING, "WRN")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-logger.addHandler(console_handler)
+
+logging.basicConfig(level=logging.INFO, handlers=[console_handler])
 
 app = Quart(__name__)
 current_token_idx = 0
