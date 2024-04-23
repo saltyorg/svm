@@ -16,4 +16,4 @@ RUN pip install --upgrade pip && \
 EXPOSE 8000
 
 # Start gunicorn
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "app:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "app:app"]
