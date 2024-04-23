@@ -1,9 +1,9 @@
 import os
 import logging
-import requests
-import redis
+import httpx
+import redis.asyncio as redis
 import json
-from flask import Flask, request, jsonify, make_response
+from quart import Quart, request, jsonify
 from datetime import datetime
 
 # Development Configurations
@@ -13,15 +13,17 @@ DEV_CONFIG = {
     'REDIS_HOST': 'localhost'
 }
 
-is_development = os.environ.get('FLASK_ENV') == 'development'
+is_development = os.environ.get('QUART_ENV') == 'development'
+
 
 class LogColors:
     DEBUG = '\033[92m'    # GREEN
     INFO = '\033[94m'     # BLUE
     WARNING = '\033[93m'  # YELLOW
     ERROR = '\033[91m'    # RED
-    CRITICAL = '\033[91m' # RED
+    CRITICAL = '\033[91m'  # RED
     ENDCOLOR = '\033[0m'  # Reset to the default color
+
 
 class ColoredFormatter(logging.Formatter):
     def format(self, record):
@@ -39,13 +41,14 @@ class ColoredFormatter(logging.Formatter):
 
         return super(ColoredFormatter, self).format(record)
 
+
 # Set configurations
 if is_development:
     ACCESS_TOKENS = DEV_CONFIG['GITHUB_PATS'].split(',')
     API_USAGE_THRESHOLD = DEV_CONFIG['API_USAGE_THRESHOLD']
     REDIS_HOST = DEV_CONFIG['REDIS_HOST']
 else:
-    for var in ['GITHUB_PATS', 'APPRISE_URL', 'API_USAGE_THRESHOLD', 'REDIS_HOST']:
+    for var in ['GITHUB_PATS', 'API_USAGE_THRESHOLD', 'REDIS_HOST']:
         if not os.environ.get(var):
             raise EnvironmentError(f"{var} not set in environment variables!")
     ACCESS_TOKENS = os.environ['GITHUB_PATS'].split(',')
@@ -71,23 +74,31 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
-app = Flask(__name__)
+app = Quart(__name__)
 current_token_idx = 0
 
-redis_client = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
+
+redis_client = redis.StrictRedis(
+    host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 
 
-def get_from_cache(key):
-    return redis_client.hgetall(key)
+async def get_from_cache(key):
+    res = redis_client.hgetall(key)
+    if isinstance(res, dict):
+        return res
+    return await res
 
 
-def set_to_cache(key, data, etag):
-    redis_client.hset(key, mapping={"data": json.dumps(data), "etag": etag})
-    redis_client.expire(key, 86400)  # cache for 24 hours
+async def set_to_cache(key, data, etag):
+    future = redis_client.hset(
+        key, mapping={"data": json.dumps(data), "etag": etag})
+    assert not isinstance(future, int)
+    await redis_client.expire(key, 86400)  # cache for 24 hours
+    return await future
 
 
 @app.route('/version', methods=["GET"])
-def proxy():
+async def proxy():
     global current_token_idx
 
     try:
@@ -95,7 +106,7 @@ def proxy():
         if not url_to_fetch:
             raise ValueError("url parameter is required")
 
-        cached_resp = get_from_cache(url_to_fetch)
+        cached_resp = await get_from_cache(url_to_fetch)
 
         token = ACCESS_TOKENS[current_token_idx]
         current_token_idx = (current_token_idx + 1) % len(ACCESS_TOKENS)
@@ -105,7 +116,9 @@ def proxy():
         if cached_resp and "etag" in cached_resp:
             headers['If-None-Match'] = cached_resp["etag"]
 
-        response = requests.get(url_to_fetch, headers=headers)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url_to_fetch, headers=headers)
+
         remaining = int(response.headers.get('X-RateLimit-Remaining', 0))
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
 
@@ -120,15 +133,16 @@ def proxy():
         logger.info(log_msg)
 
         if response.status_code == 304:
-            logger.info(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} Using cached data for URL: {url_to_fetch}")
+            logger.info(
+                f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} Using cached data for URL: {url_to_fetch}")
             return jsonify(json.loads(cached_resp["data"]))
         elif response.status_code == 200:
-            set_to_cache(url_to_fetch, response.json(), response.headers.get('ETag', ''))
+            await set_to_cache(url_to_fetch, response.json(), response.headers.get('ETag', ''))
             return jsonify(response.json())
         else:
-            return make_response(jsonify({'error': 'Upstream API error', 'message': response.text}), response.status_code)
+            return jsonify({'error': 'Upstream API error', 'message': response.text}), response.status_code
 
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
         request_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         log_message = f"{request_time} Invalid request ip={ip} error={str(e)} uri={request.full_path}"
@@ -144,7 +158,7 @@ def proxy():
 
 
 @app.route('/ping', methods=["GET"])
-def ping():
+async def ping():
     return jsonify({'status': 'ok', 'message': 'Service is up and running'})
 
 
