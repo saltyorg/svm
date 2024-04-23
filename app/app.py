@@ -2,7 +2,6 @@ import os
 import logging
 import requests
 import redis
-import apprise
 import json
 from flask import Flask, request, jsonify, make_response
 from datetime import datetime
@@ -10,7 +9,6 @@ from datetime import datetime
 # Development Configurations
 DEV_CONFIG = {
     'GITHUB_PATS': 'YOUR_DEV_PAT1,YOUR_DEV_PAT2',
-    'APPRISE_URL': 'YOUR_DEV_APPRISE_URL',
     'API_USAGE_THRESHOLD': 50,
     'REDIS_HOST': 'localhost'
 }
@@ -44,7 +42,6 @@ class ColoredFormatter(logging.Formatter):
 # Set configurations
 if is_development:
     ACCESS_TOKENS = DEV_CONFIG['GITHUB_PATS'].split(',')
-    APPRISE_URL = DEV_CONFIG['APPRISE_URL']
     API_USAGE_THRESHOLD = DEV_CONFIG['API_USAGE_THRESHOLD']
     REDIS_HOST = DEV_CONFIG['REDIS_HOST']
 else:
@@ -52,7 +49,6 @@ else:
         if not os.environ.get(var):
             raise EnvironmentError(f"{var} not set in environment variables!")
     ACCESS_TOKENS = os.environ['GITHUB_PATS'].split(',')
-    APPRISE_URL = os.environ['APPRISE_URL']
     API_USAGE_THRESHOLD = int(os.environ['API_USAGE_THRESHOLD'])
     REDIS_HOST = os.environ['REDIS_HOST']
 
@@ -78,9 +74,6 @@ logger.addHandler(console_handler)
 app = Flask(__name__)
 current_token_idx = 0
 
-ap = apprise.Apprise()
-ap.add(APPRISE_URL)
-
 redis_client = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 
 
@@ -91,13 +84,6 @@ def get_from_cache(key):
 def set_to_cache(key, data, etag):
     redis_client.hset(key, mapping={"data": json.dumps(data), "etag": etag})
     redis_client.expire(key, 86400)  # cache for 24 hours
-
-
-def send_notification(title, message):
-    ap.notify(
-        body=message,
-        title=title,
-    )
 
 
 @app.route('/version', methods=["GET"])
