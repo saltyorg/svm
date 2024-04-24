@@ -3,6 +3,7 @@ import logging
 import httpx
 import redis.asyncio as redis
 import json
+import time
 from quart import Quart, request, jsonify
 
 # Development Configurations
@@ -94,10 +95,11 @@ async def get_from_cache(key):
 
 
 async def set_to_cache(key, data, etag):
+    current_time = int(time.time())
     future = redis_client.hset(
-        key, mapping={"data": json.dumps(data), "etag": etag})
+        key, mapping={"data": json.dumps(data), "etag": etag, "last_checked": current_time})
     assert not isinstance(future, int)
-    await redis_client.expire(key, 86400)  # cache for 24 hours
+    await redis_client.expire(key, 86400)
     return await future
 
 
@@ -111,6 +113,8 @@ async def proxy():
             raise ValueError("url parameter is required")
 
         cached_resp = await get_from_cache(url_to_fetch)
+        last_checked = int(cached_resp.get('last_checked', 0))
+        current_time = int(time.time())
 
         token = ACCESS_TOKENS[current_token_idx]
         current_token_idx = (current_token_idx + 1) % len(ACCESS_TOKENS)
@@ -118,7 +122,11 @@ async def proxy():
         headers = {'Authorization': f'token {token}'}
 
         if cached_resp and "etag" in cached_resp:
-            headers['If-None-Match'] = cached_resp["etag"]
+            if current_time - last_checked >= 60:
+                logger.info(f"Using cached data for URL: {url_to_fetch}")
+                return jsonify(json.loads(cached_resp["data"]))
+            else:
+                headers['If-None-Match'] = cached_resp["etag"]
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url_to_fetch, headers=headers)
