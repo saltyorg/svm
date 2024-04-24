@@ -145,7 +145,7 @@ async def proxy():
 
         if response.status_code == 304:
             logger.info(f"Using cached data for URL: {url_to_fetch}")
-            await set_to_cache(url_to_fetch, cached_resp["data"], cached_resp["etag"])
+            await set_to_cache(url_to_fetch, json.loads(cached_resp["data"]), cached_resp["etag"])
             return jsonify(json.loads(cached_resp["data"]))
         elif response.status_code == 200:
             await set_to_cache(url_to_fetch, response.json(), response.headers.get('ETag', ''))
