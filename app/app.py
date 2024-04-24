@@ -121,10 +121,6 @@ async def proxy():
 
         headers = {'Authorization': f'token {token}'}
 
-        logger.info(cached_resp["last_checked"])
-        logger.info(last_checked)
-        logger.info(current_time)
-
         if cached_resp and "etag" in cached_resp:
             if "last_checked" in cached_resp and current_time - last_checked < 60:
                 logger.info(f"Using newly cached data for URL: {url_to_fetch}")
@@ -148,8 +144,8 @@ async def proxy():
         logger.info(log_msg)
 
         if response.status_code == 304:
-            logger.info(
-                f"Using cached data for URL: {url_to_fetch}")
+            logger.info(f"Using cached data for URL: {url_to_fetch}")
+            await set_to_cache(url_to_fetch, cached_resp["data"], cached_resp["etag"])
             return jsonify(json.loads(cached_resp["data"]))
         elif response.status_code == 200:
             await set_to_cache(url_to_fetch, response.json(), response.headers.get('ETag', ''))
