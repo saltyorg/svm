@@ -123,7 +123,7 @@ async def proxy():
 
         if cached_resp and "etag" in cached_resp:
             if "last_checked" in cached_resp and current_time - last_checked < 60:
-                logger.info(f"Using cached data for URL: {url_to_fetch}")
+                logger.info(f"Using newly cached data for URL: {url_to_fetch}")
                 return jsonify(json.loads(cached_resp["data"]))
             else:
                 headers['If-None-Match'] = cached_resp["etag"]
