@@ -121,6 +121,8 @@ async def proxy():
 
         headers = {'Authorization': f'token {token}'}
 
+        logger.info(cached_resp)
+
         if cached_resp and "etag" in cached_resp:
             if "last_checked" in cached_resp and current_time - last_checked < 60:
                 logger.info(f"Using newly cached data for URL: {url_to_fetch}")
