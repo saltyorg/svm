@@ -121,7 +121,7 @@ async def proxy():
 
         headers = {'Authorization': f'token {token}'}
 
-        logger.info(json.loads(cached_resp))
+        logger.info(cached_resp["last_checked"])
 
         if cached_resp and "etag" in cached_resp:
             if "last_checked" in cached_resp and current_time - last_checked < 60:
